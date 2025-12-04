@@ -205,3 +205,12 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Ignore temporary files and directories
+tmp/*
+
+# But keep the .gitkeep file in the tmp directory
+!tmp/.gitkeep
+
+.vscode/
+*.code-workspace
