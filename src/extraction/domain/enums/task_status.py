@@ -3,7 +3,7 @@ from enum import Enum
 
 class TaskStatus(str, Enum):
     PENDING = "pending"
-    RUNNING = "running"
+    IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
     SKIPPED = "skipped"

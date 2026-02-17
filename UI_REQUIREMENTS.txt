@@ -1,0 +1,81 @@
+# Desarrollo de PoC de Interfaz (Tauri + React)
+
+## 1. Contexto del Proyecto y Arquitectura
+
+Desarrolla la interfaz de usuario para una aplicación de automatización profesional. La UI debe vivir en la carpeta `/ui` de un monorepositorio donde ya existe una carpeta `/src` (Backend Python).
+
+**Principios de Diseño:**
+
+- **Fachada Pura:** La UI no contiene lógica de negocio. Delega la orquestación al Bounded Context (BC) **Extraction** y la validación al BC **Licensing** (ambos en el backend).
+- **Arquitectura Hexagonal:** El frontend debe estar preparado para cambiar los "Mocks" actuales por adaptadores de WebSocket/API real en el futuro.
+- **Tecnologías:** Tauri, React, Tailwind CSS, Lucide Icons, Framer Motion y `react-select`.
+
+---
+
+## 2. Estructura de Navegación y Vistas (Flujo PoC)
+
+### A. Vista 1: Dashboard Principal
+
+- **Header:** Muestra el estado de la licencia (consumido desde un mock del BC Licensing).
+- **KPI Cards:** Cuatro tarjetas con: "Total Extracted", "Success Rate", "Active Bots", y "Proxy Health".
+- **Empty State / Table:** Una lista de campañas recientes. Si no hay, mostrar un botón central "Create First Campaign".
+
+### B. Vista 2: Formulario de Creación (Wizard)
+
+- **Campos:** `Title` (text), `Activity` (select con búsqueda).
+- **Geographic Picker:** Implementar `react-select` con selección jerárquica:
+    - `Country` (Single select).
+    - `Admin 1` (Multi-select dependiente).
+    - `City` (Multi-select dependiente del nivel anterior).
+- **Acción:** Botón "Create and Start Extraction". Al pulsar, debe simular un envío al BC Extraction y saltar a la Vista 3.
+
+### C. Vista 3: Monitor de Extracción (Split-View Profesional)
+
+Es un layout de pantalla completa dividido por un separador ajustable (Resizable Panel).
+
+1. **Lateral Izquierdo (Métricas & Logs):**
+    - Progreso circular (%) y contador de lugares extraídos.
+    - **Data Table:** Lista de lugares extraídos en tiempo real (Name, Address, Rating, Status).
+    - **Toggle:** Botón elegante para colapsar/expandir el panel derecho (Navegadores).
+2. **Panel Derecho (Browser Viewport):**
+    - **Tab System:** Pestañas superiores que representan cada bot lanzado por el orquestador (Bot #1, Bot #2...).
+    - **Contenido de Tab:** Un área de visualización que simula el navegador.
+    - **Overlay:** Texto superior: "Bot #N - Extracting [Activity] in [City] - 55%".
+
+---
+
+## 3. Simulación de Comportamiento (Mocking del BC Extraction)
+
+Como el backend en `/src` aún no está conectado, la `/ui` debe incluir un `ExtractionServiceMock`:
+
+- Al iniciar una campaña, debe disparar un temporizador.
+- Cada 2-3 segundos, debe añadir una nueva fila a la tabla de "Extracted Places".
+- Cada pestaña de bot debe actualizar una imagen o un canvas para simular movimiento del navegador (usa imágenes de placeholder o colores que cambien).
+
+---
+
+## 4. Requisitos Estéticos y UX
+
+- **Stealth Visual:** La interfaz debe ser oscura (Dark Mode), con una estética minimalista similar a herramientas como *Raycast* o *Linear*.
+- **Interacción de Navegadores:** El sistema de pestañas debe ser fluido. Al cambiar de pestaña, el "streaming" del bot correspondiente debe aparecer instantáneamente.
+- **Responsividad Interna:** El panel de la derecha debe ajustarse al ancho disponible cuando el panel izquierdo se colapsa.
+
+---
+
+## 5. Instrucciones Técnicas de Implementación (Directas para la IA)
+
+1. **Carpeta `/ui`:** Inicializa un proyecto Vite + React + Tailwind dentro de `/ui`. Configura Tauri para que apunte a esta carpeta.
+2. **Componente `Select2`:** Crea un componente reutilizable basado en `react-select` que soporte búsqueda asíncrona y multi-selección con chips.
+3. **State Management:** Usa Context API o Zustand para manejar el estado global de la campaña activa y los bots simulados.
+4. **Separación de Responsabilidades:** * `ui/src/domain`: Define interfaces como `Campaign`, `Place`, `Bot`.
+    - `ui/src/infrastructure`: Implementa el `MockExtractionAdapter`.
+    - `ui/src/presentation`: Componentes de React.
+
+---
+
+### **Instrucciones de Estructura de Archivos:**
+
+1. Crea la UI dentro de la carpeta `/ui` usando **Vite + React**.
+2. La configuración de **Tauri** (`src-tauri`) debe residir dentro de `/ui/src-tauri`.
+3. En el archivo `tauri.conf.json`, asegúrate de que `beforeDevCommand` y `beforeBuildCommand` apunten correctamente a los scripts de npm dentro de la carpeta `/ui`.
+4. Genera un archivo `MockExtractionService.js` que use `setInterval` para simular el flujo de datos (frames de video falsos y lista de lugares) que enviaría el backend de Python, para que yo pueda ver la interfaz funcionando sin encender el servidor.
