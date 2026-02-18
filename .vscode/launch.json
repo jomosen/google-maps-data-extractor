@@ -1,0 +1,39 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Backend API (FastAPI)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/extraction/presentation/run_server.py",
+            "cwd": "${workspaceFolder}/src/extraction/presentation",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            },
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Frontend UI (Vite)",
+            "type": "node-terminal",
+            "request": "launch",
+            "command": "npm run dev",
+            "cwd": "${workspaceFolder}/ui"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "🚀 Full Stack (Backend + Frontend)",
+            "configurations": [
+                "Backend API (FastAPI)",
+                "Frontend UI (Vite)"
+            ],
+            "stopAll": true,
+            "presentation": {
+                "hidden": false,
+                "group": "full-stack",
+                "order": 1
+            }
+        }
+    ]
+}

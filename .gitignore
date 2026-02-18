@@ -213,4 +213,5 @@ tmp/*
 !tmp/.gitkeep
 
 .vscode/
+!.vscode/launch.json
 *.code-workspace
