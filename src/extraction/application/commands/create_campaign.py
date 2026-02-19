@@ -10,7 +10,7 @@ from ...domain.value_objects.geo import Geoname
 from ...domain.value_objects.ids import CampaignId
 from shared.logging import get_logger
 from shared.events import EventBus
-from ..services import GeonameSelectionService
+from ...domain.services import GeonameSelectionService
 
 logger = get_logger(__name__)
 
