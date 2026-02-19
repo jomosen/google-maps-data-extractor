@@ -206,6 +206,11 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
+# SQLite database (runtime artifact)
+*.db
+*.db-shm
+*.db-wal
+
 # Ignore temporary files and directories
 tmp/*
 
