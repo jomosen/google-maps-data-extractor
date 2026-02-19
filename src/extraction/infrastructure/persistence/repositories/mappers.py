@@ -23,7 +23,6 @@ from ....domain.value_objects.campaign import (
     CampaignGeonameSelectionParams,
     EnrichmentPoolConfig,
 )
-from ....domain.enums.campaign_scope import CampaignScope
 from ....domain.enums.enrichment_type import EnrichmentType
 from ....domain.value_objects.geo import Geoname
 from ....domain.value_objects.ids import (
@@ -60,21 +59,20 @@ def campaign_config_to_dict(config: CampaignConfig) -> dict[str, Any]:
     return {
         "search_seeds": list(config.search_seeds),
         "geoname_selection_params": {
-            "scope": config.geoname_selection_params.scope.value,
-            "scope_country_code": config.geoname_selection_params.scope_country_code,
-            "scope_geoname_id": config.geoname_selection_params.scope_geoname_id,
-            "scope_geoname_name": config.geoname_selection_params.scope_geoname_name,
-            "depth_level": config.geoname_selection_params.depth_level.value,
+            "country_code": config.geoname_selection_params.country_code,
+            "admin1_code": config.geoname_selection_params.admin1_code,
+            "admin2_code": config.geoname_selection_params.admin2_code,
+            "city_geoname_id": config.geoname_selection_params.city_geoname_id,
             "min_population": config.geoname_selection_params.min_population,
             "iso_language": config.geoname_selection_params.iso_language,
+            "location_name": config.geoname_selection_params.location_name,
         },
         "locale": config.locale,
         "max_results": config.max_results,
         "min_rating": config.min_rating,
         "min_num_reviews": config.min_num_reviews,
         "max_reviews": config.max_reviews,
-        "max_total_bots": config.max_total_bots,
-        "extraction_bots": config.extraction_bots,
+        "max_bots": config.max_bots,
         "enrichment_pools": [
             {
                 "enrichment_type": pool.enrichment_type.value,
@@ -93,21 +91,20 @@ def dict_to_campaign_config(data: dict[str, Any]) -> CampaignConfig:
     return CampaignConfig(
         search_seeds=tuple(data["search_seeds"]),
         geoname_selection_params=CampaignGeonameSelectionParams(
-            scope=CampaignScope(gsp["scope"]),
-            scope_country_code=gsp.get("scope_country_code"),
-            scope_geoname_id=gsp.get("scope_geoname_id"),
-            scope_geoname_name=gsp.get("scope_geoname_name"),
-            depth_level=CampaignDepthLevel(gsp["depth_level"]),
+            country_code=gsp["country_code"],
+            admin1_code=gsp.get("admin1_code"),
+            admin2_code=gsp.get("admin2_code"),
+            city_geoname_id=gsp.get("city_geoname_id"),
             min_population=gsp.get("min_population", 15000),
             iso_language=gsp.get("iso_language"),
+            location_name=gsp.get("location_name", ""),
         ),
         locale=data.get("locale", "en-US"),
         max_results=data.get("max_results", 50),
         min_rating=data.get("min_rating", 4.0),
         min_num_reviews=data.get("min_num_reviews", 0),
         max_reviews=data.get("max_reviews", 0),
-        max_total_bots=data.get("max_total_bots", 30),
-        extraction_bots=data.get("extraction_bots", 15),
+        max_bots=data.get("max_bots", 30),
         enrichment_pools=tuple(
             EnrichmentPoolConfig(
                 enrichment_type=EnrichmentType(pool["enrichment_type"]),
@@ -164,11 +161,15 @@ def model_to_campaign(model: CampaignModel) -> Campaign:
 def geoname_to_dict(geoname: Geoname) -> dict[str, Any]:
     """Convert Geoname value object to dictionary for JSON storage."""
     return {
+        "geoname_id": geoname.geoname_id,
         "name": geoname.name,
         "latitude": geoname.latitude,
         "longitude": geoname.longitude,
         "country_code": geoname.country_code,
         "population": geoname.population,
+        "feature_code": geoname.feature_code,
+        "admin1_code": geoname.admin1_code,
+        "admin2_code": geoname.admin2_code,
         "postal_code_regex": geoname.postal_code_regex,
         "country_name": geoname.country_name,
         "admin1_name": geoname.admin1_name,
@@ -178,11 +179,15 @@ def geoname_to_dict(geoname: Geoname) -> dict[str, Any]:
 def dict_to_geoname(data: dict[str, Any]) -> Geoname:
     """Convert dictionary from JSON storage to Geoname value object."""
     return Geoname(
+        geoname_id=data["geoname_id"],
         name=data["name"],
         latitude=data["latitude"],
         longitude=data["longitude"],
         country_code=data["country_code"],
         population=data["population"],
+        feature_code=data.get("feature_code"),
+        admin1_code=data.get("admin1_code"),
+        admin2_code=data.get("admin2_code"),
         postal_code_regex=data.get("postal_code_regex"),
         country_name=data.get("country_name"),
         admin1_name=data.get("admin1_name"),
