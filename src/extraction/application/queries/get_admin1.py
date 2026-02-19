@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 from ...domain.interfaces.geoname_query_service import GeonameQueryService
-from .dtos import GeonameDTO
+from .dtos import GeonameDto
 
 
 @dataclass(frozen=True)
@@ -19,14 +19,14 @@ class GetAdmin1Handler:
     def __init__(self, geoname_service: GeonameQueryService) -> None:
         self._geoname_service = geoname_service
 
-    def handle(self, query: GetAdmin1Query) -> list[GeonameDTO]:
+    def handle(self, query: GetAdmin1Query) -> list[GeonameDto]:
         geonames = self._geoname_service.find_admin_geonames({
             "countryCode": query.country_code,
             "featureCode": "ADM1",
         })
 
         results = [
-            GeonameDTO(
+            GeonameDto(
                 geoname_id=g.geoname_id,
                 name=g.name,
                 code=g.admin1_code or str(g.geoname_id),

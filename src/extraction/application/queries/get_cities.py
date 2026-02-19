@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 from ...domain.interfaces.geoname_query_service import GeonameQueryService
-from .dtos import GeonameDTO
+from .dtos import GeonameDto
 
 
 @dataclass(frozen=True)
@@ -22,7 +22,7 @@ class GetCitiesHandler:
     def __init__(self, geoname_service: GeonameQueryService) -> None:
         self._geoname_service = geoname_service
 
-    def handle(self, query: GetCitiesQuery) -> list[GeonameDTO]:
+    def handle(self, query: GetCitiesQuery) -> list[GeonameDto]:
         filters = {
             "countryCode": query.country_code,
             "minPopulation": query.min_population,
@@ -35,7 +35,7 @@ class GetCitiesHandler:
         geonames = self._geoname_service.find_city_geonames(filters)
 
         results = [
-            GeonameDTO(
+            GeonameDto(
                 geoname_id=g.geoname_id,
                 name=g.name,
                 code=str(g.geoname_id),
