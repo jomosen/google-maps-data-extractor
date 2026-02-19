@@ -140,7 +140,7 @@ class Campaign:
     def mark_failed(self) -> None:
         """
         Mark campaign as failed.
-        
+
         Raises:
             CampaignError: If campaign is already completed
         """
@@ -149,6 +149,38 @@ class Campaign:
 
         self.status = CampaignStatus.FAILED
         self.completed_at = datetime.now(timezone.utc)
+        self.touch()
+
+    def resume(self) -> None:
+        """
+        Resume a failed campaign by resetting it to PENDING.
+
+        Raises:
+            CampaignError: If campaign is not in FAILED state
+        """
+        if self.status != CampaignStatus.FAILED:
+            raise CampaignError(
+                f"Cannot resume campaign in {self.status.value} state. "
+                "Only FAILED campaigns can be resumed."
+            )
+        self.status = CampaignStatus.PENDING
+        self.failed_tasks = 0
+        self.completed_at = None
+        self.touch()
+
+    def mark_archived(self) -> None:
+        """
+        Archive a finished campaign (soft removal from active list).
+
+        Raises:
+            CampaignError: If campaign is not COMPLETED or FAILED
+        """
+        if self.status not in {CampaignStatus.COMPLETED, CampaignStatus.FAILED}:
+            raise CampaignError(
+                f"Cannot archive campaign in {self.status.value} state. "
+                "Only COMPLETED or FAILED campaigns can be archived."
+            )
+        self.status = CampaignStatus.ARCHIVED
         self.touch()
 
     # ---------------------------------------------------------
@@ -192,11 +224,16 @@ class Campaign:
         return self.status == CampaignStatus.COMPLETED
 
     def is_finished(self) -> bool:
-        """Check if campaign has finished (completed or failed)."""
+        """Check if campaign has finished (completed, failed, or archived)."""
         return self.status in {
             CampaignStatus.COMPLETED,
             CampaignStatus.FAILED,
+            CampaignStatus.ARCHIVED,
         }
+
+    def can_be_archived(self) -> bool:
+        """Check if campaign can be archived."""
+        return self.status in {CampaignStatus.COMPLETED, CampaignStatus.FAILED}
 
     # ---------------------------------------------------------
     # UTIL

@@ -32,12 +32,13 @@ class PlaceExtractionTask:
     campaign_id: CampaignId
     search_seed: str
     geoname: Geoname
-    event_bus: EventBus  # Added for event publishing
 
     status: Status = Status.PENDING
     attempts: int = 0
     last_error: Optional[str] = None
     places_extracted: int = 0  # Track progress
+
+    event_bus: Optional[EventBus] = field(default=None, repr=False, compare=False)
 
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     started_at: Optional[datetime] = None
@@ -68,36 +69,36 @@ class PlaceExtractionTask:
         self.status = Status.IN_PROGRESS
         self.started_at = datetime.now(timezone.utc)
         self.touch()
-        
-        # Emit event
-        asyncio.create_task(self.event_bus.publish(
-            TaskStartedEvent(
-                occurred_at=datetime.now(),
-                aggregate_id=str(self.id),
-                task_id=str(self.id),
-                search_seed=self.search_seed,
-                location=self.geoname.name
-            )
-        ))
+
+        if self.event_bus:
+            asyncio.create_task(self.event_bus.publish(
+                TaskStartedEvent(
+                    occurred_at=datetime.now(),
+                    aggregate_id=str(self.id),
+                    task_id=str(self.id),
+                    search_seed=self.search_seed,
+                    location=self.geoname.name
+                )
+            ))
 
     def mark_completed(self) -> None:
         self.status = Status.COMPLETED
         self.completed_at = datetime.now(timezone.utc)
         self.touch()
-        
-        # Emit event
-        asyncio.create_task(self.event_bus.publish(
-            TaskCompletedEvent(
-                occurred_at=datetime.now(),
-                aggregate_id=str(self.id),
-                task_id=str(self.id),
-                total_places_extracted=self.places_extracted,
-                duration_seconds=(
-                    (self.completed_at - self.started_at).total_seconds()
-                    if self.started_at else None
+
+        if self.event_bus:
+            asyncio.create_task(self.event_bus.publish(
+                TaskCompletedEvent(
+                    occurred_at=datetime.now(),
+                    aggregate_id=str(self.id),
+                    task_id=str(self.id),
+                    total_places_extracted=self.places_extracted,
+                    duration_seconds=(
+                        (self.completed_at - self.started_at).total_seconds()
+                        if self.started_at else None
+                    )
                 )
-            )
-        ))
+            ))
 
     def mark_failed(self, error_message: Optional[str] = None) -> None:
         """
@@ -113,17 +114,17 @@ class PlaceExtractionTask:
         self.last_error = error_message
         self.completed_at = datetime.now(timezone.utc)
         self.touch()
-        
-        # Emit event
-        asyncio.create_task(self.event_bus.publish(
-            TaskFailedEvent(
-                occurred_at=datetime.now(),
-                aggregate_id=str(self.id),
-                task_id=str(self.id),
-                error=error_message or "Unknown error",
-                places_extracted_before_failure=self.places_extracted
-            )
-        ))
+
+        if self.event_bus:
+            asyncio.create_task(self.event_bus.publish(
+                TaskFailedEvent(
+                    occurred_at=datetime.now(),
+                    aggregate_id=str(self.id),
+                    task_id=str(self.id),
+                    error=error_message or "Unknown error",
+                    places_extracted_before_failure=self.places_extracted
+                )
+            ))
 
     def mark_pending(self) -> None:
         """
