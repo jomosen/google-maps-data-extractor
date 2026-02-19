@@ -473,6 +473,23 @@ Tailwind CSS with custom theme:
 | Presentation | Commands | `pause_extraction`, `cancel_extraction` - Marked TODO in CommandHandler |
 | Licensing | HTTP Client | `HttpLicenseClient` implementation with offline grace period |
 | Backend | Licensing API | Separate project: FastAPI + Stripe/Paddle integration |
+| Application | Resume Campaign | Load pending tasks from DB to resume an interrupted campaign |
+
+### ⚠️ Design Notes
+
+**`PlaceExtractionTask.event_bus` injection on resume:**
+
+`PlaceExtractionTask` holds an optional `event_bus` field (default `None`). When tasks are created fresh via `PlaceExtractionTask.create(..., event_bus=event_bus)`, domain events (`TaskStartedEvent`, `TaskCompletedEvent`, `TaskFailedEvent`) are published normally.
+
+When tasks are loaded from the DB via `model_to_task()` (e.g., to resume a campaign), `event_bus` is `None` and state-change events are silently skipped. This is currently harmless because the execution pipeline always creates tasks fresh. **When resume is implemented**, `model_to_task` must accept an `event_bus` parameter and inject it:
+
+```python
+def model_to_task(
+    model: PlaceExtractionTaskModel,
+    event_bus: Optional[EventBus] = None,
+) -> PlaceExtractionTask:
+    return PlaceExtractionTask(..., event_bus=event_bus)
+```
 
 ---
 
