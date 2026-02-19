@@ -1,11 +1,12 @@
 """FastAPI server for Extraction BC"""
 import sys
 import asyncio
+import os
+import pathlib
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from shared.logging import get_logger, configure_logging
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-import os
 
 from extraction.presentation.websocket.extraction_handler import ExtractionWebSocketHandler
 from extraction.presentation.api import campaign_router
@@ -16,8 +17,11 @@ from extraction.infrastructure.persistence import init_database
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
+# Project root: src/extraction/presentation/ → src/extraction/ → src/ → root
+_PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{_PROJECT_ROOT / 'data.db'}")
+
 # Initialize database on startup
-DATABASE_URL = "sqlite:///data.db"
 init_database(DATABASE_URL)
 
 
