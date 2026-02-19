@@ -12,7 +12,7 @@ from typing import List
 from ...application.queries.get_countries import (
     GetCountriesQuery,
     GetCountriesHandler,
-    CountryResult,
+    CountryDto,
 )
 from ...application.queries.get_admin1 import (
     GetAdmin1Query,
@@ -26,7 +26,7 @@ from ...application.queries.get_cities import (
     GetCitiesQuery,
     GetCitiesHandler,
 )
-from ...application.queries.dtos import GeonameDTO
+from ...application.queries.dtos import GeonameDto
 from ...infrastructure.http.geoname_query_service import HttpGeonameQueryService
 
 
@@ -40,8 +40,8 @@ def get_geoname_service() -> HttpGeonameQueryService:
     return HttpGeonameQueryService(base_url=base_url)
 
 
-@router.get("/countries", response_model=List[CountryResult])
-async def get_countries() -> List[CountryResult]:
+@router.get("/countries", response_model=List[CountryDto])
+async def get_countries() -> List[CountryDto]:
     """
     Get all available countries.
     
@@ -54,8 +54,8 @@ async def get_countries() -> List[CountryResult]:
     return handler.handle(query)
 
 
-@router.get("/countries/{country_code}/regions", response_model=List[GeonameDTO])
-async def get_regions(country_code: str) -> List[GeonameDTO]:
+@router.get("/countries/{country_code}/regions", response_model=List[GeonameDto])
+async def get_regions(country_code: str) -> List[GeonameDto]:
     """
     Get Admin1 divisions (regions/states) for a country.
     
@@ -71,11 +71,11 @@ async def get_regions(country_code: str) -> List[GeonameDTO]:
     return handler.handle(query)
 
 
-@router.get("/countries/{country_code}/provinces", response_model=List[GeonameDTO])
+@router.get("/countries/{country_code}/provinces", response_model=List[GeonameDto])
 async def get_provinces(
     country_code: str,
     admin1_code: str = QueryParam(..., description="Admin1 code (region)")
-) -> List[GeonameDTO]:
+) -> List[GeonameDto]:
     """
     Get Admin2 divisions (provinces/counties) for a country and region.
     
@@ -95,13 +95,13 @@ async def get_provinces(
     return handler.handle(query)
 
 
-@router.get("/countries/{country_code}/cities", response_model=List[GeonameDTO])
+@router.get("/countries/{country_code}/cities", response_model=List[GeonameDto])
 async def get_cities(
     country_code: str,
     admin1_code: str | None = QueryParam(None, description="Admin1 code (region)"),
     admin2_code: str | None = QueryParam(None, description="Admin2 code (province)"),
     min_population: int = QueryParam(0, ge=0, description="Minimum population filter")
-) -> List[GeonameDTO]:
+) -> List[GeonameDto]:
     """
     Get cities for a country, optionally filtered by region/province.
     
