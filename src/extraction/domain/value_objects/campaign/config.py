@@ -14,30 +14,24 @@ class CampaignConfig:
     El pipeline es modular y soporta multiples pools de enriquecimiento
     que pueden ejecutarse en paralelo.
 
-    Los bots se distribuyen entre la extraccion y todos los enriquecimientos
-    activos, sin exceder max_total_bots.
-
     Ejemplo:
         config = CampaignConfig(
             search_seeds=("restaurants",),
             geoname_selection_params=params,
-            max_total_bots=30,
-            extraction_bots=15,
+            max_bots=30,
             enrichment_pools=(
                 EnrichmentPoolConfig(EnrichmentType.WEBSITE, bots=10),
             ),
         )
-        # Total: 15 + 10 + 5 = 30 bots
     """
     search_seeds: Tuple[str, ...]
     geoname_selection_params: CampaignGeonameSelectionParams
     locale: str = "en-US"
     max_results: int = 50
-    min_rating: float = 4.0
+    min_rating: float = 0
     min_num_reviews: int = 0
     max_reviews: int = 0
-    max_total_bots: int = 30  # Budget total de bots para todo el pipeline
-    extraction_bots: int = 15  # Bots dedicados a extraccion de Google Maps
+    max_bots: int = 10
     enrichment_pools: Tuple[EnrichmentPoolConfig, ...] = field(
         default_factory=lambda: (
             EnrichmentPoolConfig(EnrichmentType.WEBSITE, workers=10),
@@ -58,11 +52,8 @@ class CampaignConfig:
         if not 0.0 <= self.min_rating <= 5.0:
             raise ValueError("min_rating must be between 0.0 and 5.0")
 
-        if self.extraction_bots <= 0:
-            raise ValueError("extraction_bots must be > 0")
-
-        if self.max_total_bots <= 0:
-            raise ValueError("max_total_bots must be > 0")
+        if self.max_bots <= 0:
+            raise ValueError("max_bots must be > 0")
 
         if self.max_attempts <= 0:
             raise ValueError("max_attempts must be > 0")
@@ -75,22 +66,6 @@ class CampaignConfig:
         ]
         if len(enabled_types) != len(set(enabled_types)):
             raise ValueError("Duplicate enrichment pool types not allowed")
-
-        # Validar que el total de bots no excede el maximo
-        total_enrichment_bots = sum(
-            pool.bots
-            for pool in self.enrichment_pools
-            if pool.enabled
-        )
-        total_bots = self.extraction_bots + total_enrichment_bots
-
-        if total_bots > self.max_total_bots:
-            raise ValueError(
-                f"Total bots ({total_bots}) exceeds max_total_bots "
-                f"({self.max_total_bots}). "
-                f"Extraction: {self.extraction_bots}, "
-                f"Enrichment: {total_enrichment_bots}"
-            )
 
     def get_enrichment_pool(
         self, enrichment_type: EnrichmentType
