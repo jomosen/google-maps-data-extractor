@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class GeonameDTO:
+class GeonameDto:
     """Result DTO for a geoname (admin division or city)."""
 
     geoname_id: int
