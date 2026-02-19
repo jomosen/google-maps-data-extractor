@@ -1,54 +1,62 @@
-"""Response DTO for campaign operations"""
-from pydantic import BaseModel, Field
-from typing import Optional
+"""Response DTOs for campaign operations"""
+from __future__ import annotations
+
 from datetime import datetime
+from pydantic import BaseModel, Field
 
 
 class CampaignResponse(BaseModel):
-    """
-    Response DTO for campaign operations.
-    
-    Serializes Campaign entity for HTTP response.
-    """
-    
-    campaign_id: str = Field(
-        ...,
-        description="Unique campaign identifier (ULID)",
-        example="01ARZ3NDEKTSV4RRFFQ69G5FAV"
-    )
-    title: str = Field(
-        ...,
-        description="Auto-generated campaign title",
-        example="Restaurants in Madrid, Spain"
-    )
-    status: str = Field(
-        ...,
-        description="Campaign status",
-        example="PENDING"
-    )
-    total_tasks: int = Field(
-        ...,
-        description="Total number of extraction tasks",
-        example=10
-    )
-    created_at: datetime = Field(
-        ...,
-        description="Campaign creation timestamp"
-    )
-    extraction_bots: int = Field(
-        ...,
-        description="Number of bots allocated for extraction",
-        example=3
-    )
-    
-    class Config:
-        schema_extra = {
-            "example": {
-                "campaign_id": "01ARZ3NDEKTSV4RRFFQ69G5FAV",
-                "title": "Restaurants in Madrid, Spain",
-                "status": "PENDING",
-                "total_tasks": 10,
-                "created_at": "2026-02-17T10:30:00Z",
-                "extraction_bots": 3
-            }
-        }
+    """Response DTO for campaign list view."""
+
+    campaign_id: str = Field(..., example="01ARZ3NDEKTSV4RRFFQ69G5FAV")
+    title: str = Field(..., example="Restaurants in Madrid, Spain")
+    status: str = Field(..., example="pending")
+    total_tasks: int = Field(..., example=10)
+    created_at: datetime
+    max_bots: int = Field(..., example=30)
+    activity: str = Field(..., example="restaurants")
+    location_name: str = Field(..., example="Madrid, Spain")
+
+
+class CampaignDetailResponse(BaseModel):
+    """Response DTO for campaign detail view."""
+
+    campaign_id: str
+    title: str
+    status: str
+    total_tasks: int
+    completed_tasks: int
+    failed_tasks: int
+    completion_percentage: float
+    created_at: datetime
+    started_at: datetime | None
+    completed_at: datetime | None
+    max_bots: int
+    activity: str
+    location_name: str
+
+
+class PlaceResponse(BaseModel):
+    """Response DTO for extracted place."""
+
+    place_id: str
+    name: str | None
+    address: str | None
+    city: str | None
+    rating: float | None
+    review_count: int | None
+    phone: str | None
+    website_link: str | None
+    category: str | None
+
+
+class TaskResponse(BaseModel):
+    """Response DTO for extraction task."""
+
+    task_id: str
+    search_seed: str
+    geoname_name: str
+    status: str
+    attempts: int
+    last_error: str | None
+    created_at: datetime
