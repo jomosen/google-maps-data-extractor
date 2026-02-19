@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
-import { Input } from '../components/Input';
 import { Select2 } from '../components/Select2';
 import { useAppStore } from '../../store/appStore';
 import { ArrowLeft, Play, Loader2 } from 'lucide-react';
@@ -23,22 +22,8 @@ const ACTIVITIES = [
     { value: 'plumbers', label: 'Plumbers' },
 ].sort((a, b) => a.label.localeCompare(b.label));
 
-// Most common locales (hardcoded fallback)
-const COMMON_LOCALES = [
-    { value: 'en-US', label: 'English (United States)' },
-    { value: 'en-GB', label: 'English (United Kingdom)' },
-    { value: 'es-ES', label: 'Spanish (Spain)' },
-    { value: 'es-MX', label: 'Spanish (Mexico)' },
-    { value: 'fr-FR', label: 'French (France)' },
-    { value: 'de-DE', label: 'German (Germany)' },
-    { value: 'it-IT', label: 'Italian (Italy)' },
-    { value: 'pt-BR', label: 'Portuguese (Brazil)' },
-    { value: 'pt-PT', label: 'Portuguese (Portugal)' },
-    { value: 'ja-JP', label: 'Japanese (Japan)' },
-];
-
 export const CreateCampaignView = () => {
-    const { setView, addCampaign, startExtraction } = useAppStore();
+    const { setView, addCampaign } = useAppStore();
 
     // Form state
     const [formData, setFormData] = useState({
@@ -47,10 +32,6 @@ export const CreateCampaignView = () => {
         region: null,
         province: null,
         city: null,
-        min_population: 15000,
-        locale: 'en-US',
-        max_results: 50,
-        min_rating: 4.0
     });
 
     // Data options loaded from API
@@ -58,7 +39,6 @@ export const CreateCampaignView = () => {
     const [regions, setRegions] = useState([]);
     const [provinces, setProvinces] = useState([]);
     const [cities, setCities] = useState([]);
-    const [localeOptions, setLocaleOptions] = useState([]);
 
     // Loading states
     const [loading, setLoading] = useState({
@@ -77,57 +57,11 @@ export const CreateCampaignView = () => {
         loadCountries();
     }, []);
 
-    // Load regions and locales when country changes
+    // Load regions when country changes
     useEffect(() => {
         if (formData.country) {
             loadRegions(formData.country.code);
-
-            // Parse languages from country (comma-separated string)
-            const languages = formData.country.languages || '';
-            const langCodes = languages.split(',').map(l => l.trim()).filter(Boolean);
-
-            // Build country-specific locale options
-            const countryLocales = langCodes.map(lang => {
-                // Convert language code to locale (e.g., "en" -> "en-US", "es" -> "es-ES")
-                const locale = lang.includes('-') ? lang : `${lang}-${formData.country.code}`;
-                return {
-                    value: locale,
-                    label: `${lang.toUpperCase()} (${formData.country.name})`
-                };
-            });
-
-            // Build grouped options for Select2
-            const groupedOptions = [];
-
-            // Group 1: Country-specific locales (if any)
-            if (countryLocales.length > 0) {
-                groupedOptions.push({
-                    label: `${formData.country.name} Languages`,
-                    options: countryLocales
-                });
-            }
-
-            // Group 2: Common locales
-            groupedOptions.push({
-                label: 'Common Locales',
-                options: COMMON_LOCALES
-            });
-
-            setLocaleOptions(groupedOptions);
-
-            // Auto-select first available locale
-            const firstLocale = countryLocales.length > 0
-                ? countryLocales[0].value
-                : COMMON_LOCALES[0].value;
-
-            setFormData(prev => ({
-                ...prev,
-                locale: firstLocale,
-                region: null,
-                province: null,
-                city: null
-            }));
-
+            setFormData(prev => ({ ...prev, region: null, province: null, city: null }));
             setProvinces([]);
             setCities([]);
         }
@@ -150,9 +84,7 @@ export const CreateCampaignView = () => {
     // Load cities when province changes (or when region selected without province)
     useEffect(() => {
         if (formData.country && (formData.province || formData.region)) {
-            const filters = {
-                min_population: formData.min_population
-            };
+            const filters = {};
             if (formData.province) {
                 filters.admin2_code = formData.province.code;
             } else if (formData.region) {
@@ -160,7 +92,7 @@ export const CreateCampaignView = () => {
             }
             loadCities(formData.country.code, filters);
         }
-    }, [formData.province, formData.min_population]);
+    }, [formData.province]);
 
     const loadCountries = async () => {
         setLoading(prev => ({ ...prev, countries: true }));
@@ -247,42 +179,34 @@ export const CreateCampaignView = () => {
         setLoading(prev => ({ ...prev, submit: true }));
 
         try {
-            // Determine scope and geoname_id based on selection
-            let scope = 'country';
-            let scopeGeonameId = null;
-            let scopeGeonameName = null;
+            // Derive iso_language from the country's first language code
+            const languages = formData.country.languages || '';
+            const firstLang = languages.split(',').map(l => l.trim()).filter(Boolean)[0] || null;
+            const isoLanguage = firstLang ? firstLang.split('-')[0] : null;
 
-            if (formData.city) {
-                scope = 'city';
-                scopeGeonameId = formData.city.value; // geoname_id
-                scopeGeonameName = formData.city.name;
-            } else if (formData.province) {
-                scope = 'admin2';
-                scopeGeonameId = formData.province.value;
-                scopeGeonameName = formData.province.name;
-            } else if (formData.region) {
-                scope = 'admin1';
-                scopeGeonameId = formData.region.value;
-                scopeGeonameName = formData.region.name;
-            }
+            // Build location snapshot: most specific → least specific
+            const locationParts = [];
+            if (formData.city) locationParts.push(formData.city.name);
+            if (formData.province) locationParts.push(formData.province.name);
+            if (formData.region) locationParts.push(formData.region.name);
+            locationParts.push(formData.country.name);
+            const locationName = locationParts.join(', ');
 
             // Build API request payload
             const payload = {
                 activity: formData.activity.value,
                 country_code: formData.country.code,
-                scope: scope,
-                scope_geoname_id: scopeGeonameId,
-                scope_geoname_name: scopeGeonameName,
-                min_population: formData.min_population,
-                locale: formData.locale,
-                max_results: formData.max_results,
-                min_rating: formData.min_rating
+                admin1_code: formData.region?.code ?? null,
+                admin2_code: formData.province?.code ?? null,
+                city_geoname_id: formData.city?.value ?? null,
+                iso_language: isoLanguage,
+                location_name: locationName,
             };
 
             // Create campaign via API
             const campaign = await createCampaign(payload);
 
-            // Add to store
+            // Add to store and navigate to dashboard
             addCampaign({
                 id: campaign.campaign_id,
                 title: campaign.title,
@@ -290,11 +214,6 @@ export const CreateCampaignView = () => {
                 totalTasks: campaign.total_tasks,
                 createdAt: campaign.created_at
             });
-
-            // Start extraction via WebSocket
-            await startExtraction(campaign.campaign_id);
-
-            // Navigate to dashboard
             setView('dashboard');
 
         } catch (error) {
@@ -412,52 +331,6 @@ export const CreateCampaignView = () => {
                                         />
                                     </motion.div>
                                 )}
-                            </div>
-
-                            {/* Advanced Options */}
-                            <div className="space-y-4 pt-4 border-t border-dark-border">
-                                <h3 className="text-lg font-semibold text-white">Advanced Options</h3>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Input
-                                        label="Min Population"
-                                        type="number"
-                                        value={formData.min_population}
-                                        onChange={(e) => setFormData({ ...formData, min_population: parseInt(e.target.value) || 0 })}
-                                    />
-                                    <Input
-                                        label="Max Results per Task"
-                                        type="number"
-                                        value={formData.max_results}
-                                        onChange={(e) => setFormData({ ...formData, max_results: parseInt(e.target.value) || 50 })}
-                                    />
-                                    <Input
-                                        label="Min Rating"
-                                        type="number"
-                                        step="0.1"
-                                        value={formData.min_rating}
-                                        onChange={(e) => setFormData({ ...formData, min_rating: parseFloat(e.target.value) || 0 })}
-                                    />
-                                    {formData.country && localeOptions.length > 0 ? (
-                                        <Select2
-                                            label="Locale"
-                                            placeholder="Select locale..."
-                                            options={localeOptions}
-                                            value={
-                                                // Find selected value in grouped options
-                                                localeOptions.flatMap(group => group.options).find(l => l.value === formData.locale)
-                                            }
-                                            onChange={(selected) => setFormData({ ...formData, locale: selected.value })}
-                                        />
-                                    ) : (
-                                        <Input
-                                            label="Locale"
-                                            value={formData.locale}
-                                            onChange={(e) => setFormData({ ...formData, locale: e.target.value })}
-                                            placeholder="e.g., en-US"
-                                        />
-                                    )}
-                                </div>
                             </div>
 
                             {/* Preview */}

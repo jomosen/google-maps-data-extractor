@@ -1,39 +1,19 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { useAppStore } from '../../store/appStore';
-import { Activity, TrendingUp, Bot, Wifi, Play } from 'lucide-react';
+import { Activity, TrendingUp, Bot, Wifi } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export const DashboardView = () => {
-    const { license, campaigns, setView, loadMockCampaigns, startExtraction } = useAppStore();
-
-    const handleQuickTest = async () => {
-        const testCampaign = {
-            id: `test-${Date.now()}`,
-            title: 'Test Extraction - Spain Restaurants',
-            activity: 'restaurants',
-            geography: {
-                countryCode: 'ES',
-                countryName: 'Spain',
-                admin1Codes: ['M', 'B', 'V'],
-                cityIds: ['madrid', 'barcelona', 'valencia']
-            },
-            status: 'running',
-            progress: 0,
-            createdAt: new Date()
-        };
-
-        await startExtraction(testCampaign);
-    };
+    const { license, campaigns, setView, loadCampaigns, selectCampaign } = useAppStore();
 
     useEffect(() => {
-        loadMockCampaigns();
+        loadCampaigns();
     }, []);
 
-    const totalExtracted = campaigns.reduce((sum, c) => sum + c.totalExtracted, 0);
     const completedCampaigns = campaigns.filter(c => c.status === 'completed').length;
-    const successRate = completedCampaigns > 0
+    const successRate = campaigns.length > 0
         ? ((completedCampaigns / campaigns.length) * 100).toFixed(0)
         : 0;
 
@@ -41,7 +21,7 @@ export const DashboardView = () => {
         {
             icon: TrendingUp,
             label: 'Total Extracted',
-            value: totalExtracted.toLocaleString(),
+            value: '0',
             color: 'text-green-400'
         },
         {
@@ -124,19 +104,13 @@ export const DashboardView = () => {
                 <Card>
                     <div className="flex items-center justify-between mb-6">
                         <h2 className="text-xl font-semibold text-white">Recent Campaigns</h2>
-                        <div className="flex gap-3">
-                            <Button variant="secondary" onClick={handleQuickTest}>
-                                <Play size={16} />
-                                Test Quick Extraction
-                            </Button>
-                            <Button onClick={() => setView('create')}>
-                                Create Campaign
-                            </Button>
-                        </div>
+                        <Button onClick={() => setView('create')}>
+                            Create Campaign
+                        </Button>
                     </div>
 
                     {campaigns.length === 0 ? (
-                        <div className="text-center py-16">
+                        <div className="flex flex-col items-center justify-center py-16">
                             <div className="inline-flex items-center justify-center w-16 h-16 bg-dark-hover rounded-full mb-4">
                                 <Activity size={32} className="text-gray-500" />
                             </div>
@@ -159,34 +133,37 @@ export const DashboardView = () => {
                                         <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Activity</th>
                                         <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Location</th>
                                         <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Status</th>
-                                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Extracted</th>
+                                        <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Tasks</th>
                                         <th className="text-left py-3 px-4 text-sm font-medium text-gray-400">Date</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {campaigns.map((campaign, index) => (
                                         <motion.tr
-                                            key={campaign.id}
+                                            key={campaign.campaign_id}
                                             initial={{ opacity: 0, x: -20 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ delay: index * 0.05 }}
                                             className="border-b border-dark-border hover:bg-dark-hover transition-colors cursor-pointer"
+                                            onClick={() => selectCampaign(campaign)}
                                         >
                                             <td className="py-3 px-4 text-white font-medium">{campaign.title}</td>
                                             <td className="py-3 px-4 text-gray-300 capitalize">{campaign.activity}</td>
-                                            <td className="py-3 px-4 text-gray-300">{campaign.geography.countryName}</td>
+                                            <td className="py-3 px-4 text-gray-300">{campaign.location_name}</td>
                                             <td className="py-3 px-4">
-                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                          ${campaign.status === 'completed' ? 'bg-green-500/20 text-green-400' :
-                                                        campaign.status === 'running' ? 'bg-blue-500/20 text-blue-400' :
-                                                            campaign.status === 'failed' ? 'bg-red-500/20 text-red-400' :
-                                                                'bg-gray-500/20 text-gray-400'}`}>
-                                                    {campaign.status}
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                                    campaign.status === 'completed'   ? 'bg-green-500/20 text-green-400' :
+                                                    campaign.status === 'in_progress' ? 'bg-blue-500/20 text-blue-400' :
+                                                    campaign.status === 'failed'      ? 'bg-red-500/20 text-red-400' :
+                                                    campaign.status === 'archived'    ? 'bg-yellow-500/20 text-yellow-400' :
+                                                                                        'bg-gray-500/20 text-gray-400'
+                                                }`}>
+                                                    {campaign.status.replace('_', ' ')}
                                                 </span>
                                             </td>
-                                            <td className="py-3 px-4 text-gray-300">{campaign.totalExtracted.toLocaleString()}</td>
+                                            <td className="py-3 px-4 text-gray-300">{campaign.total_tasks}</td>
                                             <td className="py-3 px-4 text-gray-400 text-sm">
-                                                {new Date(campaign.createdAt).toLocaleDateString()}
+                                                {new Date(campaign.created_at).toLocaleDateString()}
                                             </td>
                                         </motion.tr>
                                     ))}
