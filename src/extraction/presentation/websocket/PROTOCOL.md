@@ -30,7 +30,7 @@ Commands modify extraction state and return confirmation.
     "type": "command",
     "command": "start_extraction",
     "data": {
-        "extraction_bots": 3,      // Number of bots for extraction (or "num_bots" for backward compatibility)
+        "max_bots": 3,             // Maximum number of bots to launch
         "search_seed": "restaurants",
         "cities": [
             ["Madrid", 40.4168, -3.7038],

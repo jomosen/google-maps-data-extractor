@@ -96,8 +96,7 @@ class CommandHandler:
         try:
             # Extract configuration from data
             # NOTE: Future improvement - receive campaign_id and load from repository
-            # For now, accept extraction_bots with a sensible default
-            num_bots = data.get("extraction_bots", data.get("num_bots", 3))  # Backward compatibility
+            num_bots = data.get("max_bots", data.get("num_bots", 3))
             cities = data.get("cities", [
                 ("Madrid", 40.4168, -3.7038),
                 ("Barcelona", 41.3851, 2.1734),
