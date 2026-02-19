@@ -1,4 +1,4 @@
-from .geoname_selection_service import GeonameSelectionService
+from extraction.domain.services import GeonameSelectionService
 from .task_dispatcher import (
     EnrichmentTaskDispatcher,
     ExtractionTaskDispatcher,
