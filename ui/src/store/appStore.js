@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { realExtractionService } from '../infrastructure/RealExtractionService';
 import { LicenseTier } from '../domain/License';
+import { getCampaigns, getCampaignById, getCampaignPlaces, getCampaignTasks, startCampaign, resumeCampaign, archiveCampaign } from '../infrastructure/services/campaignService';
 
 export const useAppStore = create((set, get) => ({
     // Navigation
@@ -19,6 +20,9 @@ export const useAppStore = create((set, get) => ({
     // Campaigns
     campaigns: [],
     activeCampaign: null,
+    selectedCampaign: null,
+    campaignPlaces: [],
+    campaignTasks: [],
 
     // Extraction state
     bots: [],
@@ -31,20 +35,45 @@ export const useAppStore = create((set, get) => ({
         set({ campaigns: [campaign, ...get().campaigns] });
     },
 
-    createCampaign: (campaignData) => {
-        // For now, just create a simple campaign object
-        const campaign = {
-            id: `camp-${Date.now()}`,
-            name: campaignData.name || 'Test Campaign',
-            createdAt: new Date(),
-            status: 'pending'
-        };
-        set({ campaigns: [campaign, ...get().campaigns] });
-        return campaign;
+    loadCampaigns: async () => {
+        try {
+            const campaigns = await getCampaigns();
+            set({ campaigns });
+        } catch (error) {
+            console.error("Failed to load campaigns:", error);
+        }
+    },
+
+    selectCampaign: async (campaign) => {
+        set({ selectedCampaign: campaign, campaignPlaces: [], campaignTasks: [], currentView: 'detail' });
+        try {
+            const [detail, places, tasks] = await Promise.all([
+                getCampaignById(campaign.campaign_id),
+                getCampaignPlaces(campaign.campaign_id),
+                getCampaignTasks(campaign.campaign_id),
+            ]);
+            set({ selectedCampaign: detail, campaignPlaces: places, campaignTasks: tasks });
+        } catch (error) {
+            console.error("Failed to load campaign detail:", error);
+        }
+    },
+
+    campaignAction: async (action, campaignId) => {
+        try {
+            if (action === 'start') await startCampaign(campaignId);
+            else if (action === 'resume') await resumeCampaign(campaignId);
+            else if (action === 'archive') await archiveCampaign(campaignId);
+            // Refresh detail after action
+            const detail = await getCampaignById(campaignId);
+            set({ selectedCampaign: detail });
+            // Refresh list in background
+            getCampaigns().then(campaigns => set({ campaigns }));
+        } catch (error) {
+            console.error(`Failed to ${action} campaign:`, error);
+        }
     },
 
     startExtraction: async (campaign) => {
-        // Set active campaign with full data and initial progress
         set({
             activeCampaign: {
                 ...campaign,
@@ -56,7 +85,6 @@ export const useAppStore = create((set, get) => ({
             places: []
         });
 
-        // Subscribe to real extraction updates
         realExtractionService.subscribe((state) => {
             const currentCampaign = get().activeCampaign;
             set({
@@ -65,16 +93,15 @@ export const useAppStore = create((set, get) => ({
                 activeCampaign: {
                     ...currentCampaign,
                     status: state.isRunning ? 'running' : 'idle',
-                    progress: state.bots.length > 0 ? 50 : 0 // Mock progress
+                    progress: state.bots.length > 0 ? 50 : 0
                 }
             });
         });
 
-        // Start real extraction with WebSocket
         try {
             await realExtractionService.startExtraction(campaign.id);
         } catch (error) {
-            console.error('Failed to start extraction:', error);
+            console.error("Failed to start extraction:", error);
             set({
                 activeCampaign: {
                     ...get().activeCampaign,
@@ -91,43 +118,4 @@ export const useAppStore = create((set, get) => ({
             places: places
         });
     },
-
-    // Mock data generators
-    loadMockCampaigns: () => {
-        const mockCampaigns = [
-            {
-                id: 'camp-1',
-                title: 'LA Restaurants Q1',
-                activity: 'restaurant',
-                geography: {
-                    countryCode: 'US',
-                    countryName: 'United States',
-                    admin1Codes: ['CA'],
-                    cityIds: ['1']
-                },
-                status: 'completed',
-                progress: 100,
-                totalExtracted: 1250,
-                createdAt: new Date('2026-02-10'),
-                completedAt: new Date('2026-02-11')
-            },
-            {
-                id: 'camp-2',
-                title: 'Madrid Hotels',
-                activity: 'hotel',
-                geography: {
-                    countryCode: 'ES',
-                    countryName: 'Spain',
-                    admin1Codes: ['M'],
-                    cityIds: ['8']
-                },
-                status: 'completed',
-                progress: 100,
-                totalExtracted: 890,
-                createdAt: new Date('2026-02-12'),
-                completedAt: new Date('2026-02-13')
-            }
-        ];
-        set({ campaigns: mockCampaigns });
-    }
 }));
